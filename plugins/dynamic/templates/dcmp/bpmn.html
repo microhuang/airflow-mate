@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta charset="utf-8">
+  <title>dag design</title>
+
+  <link rel="stylesheet" href="{{app_base}}/static/bpmn/editor/bpmn-editor.css" />
+
+  <link rel="stylesheet" href="//unpkg.com/layui@2.6.8/dist/css/layui.css" />
+  <!--<link rel="stylesheet" href="vendor/bpmn-js/assets/diagram-js.css" />-->
+  <link rel="stylesheet" href="{{app_base}}/static/bpmn/vendor/bpmn-js/assets/bpmn-font/css/bpmn-embedded.css" />
+  <link rel="stylesheet" href="{{app_base}}/static/bpmn/vendor/bpmn-js-properties-panel/assets/bpmn-js-properties-panel.css" />
+  <link rel="stylesheet" href="{{app_base}}/static/bpmn/vendor/diagram-js-minimap/assets/diagram-js-minimap.css" />
+
+  <link rel="stylesheet" href="{{app_base}}/static/bpmn/app.css" />
+  <link rel="stylesheet" href="{{app_base}}/static/bpmn/cus.css" />
+
+  <link rel="stylesheet" href="{{app_base}}/static/bpmn/vendor/bpmn-js-bpmnlint/assets/css/bpmn-js-bpmnlint.css" />
+
+  <link rel="icon" type="image/png" href="{{app_base}}/static/bpmn/favicon.png" />
+<style>
+  .properties-panel-parent {
+    overflow:unset;
+  }
+  svg .viewport [style] {
+    stroke:black;
+  }
+  .djs-connection .djs-visual path {
+    stroke:black;
+  }
+  .djs-connection.hover .djs-visual path {
+    stroke:red;
+  }
+  .djs-connection.selected .djs-visual path {
+    stroke:red;
+  }
+  .bjs-powered-by {
+    display:none;
+  }
+  .description--expanded {
+    width:100%;
+  }
+  /* TODO: xxx */
+  /*.djs-search-container:not(.open) {
+    display:inline;
+  }*/
+  .bjsl-button {
+    bottom:60px;
+  }
+  .bjsl-dropdown .bjsl-dropdown-content .bjsl-issues .bjsl-current-element-issues .error {
+    display:flex;
+  }
+</style>
+</head>
+<body>
+  <div class="content with-diagram" id="js-drop-zone">
+
+    <div class="message intro">
+      <div class="note">
+        Drop BPMN diagram from your desktop or <a id="js-create-diagram" href>create a new diagram</a> to get started.
+      </div>
+    </div>
+
+    <div class="message error">
+      <div class="note">
+        <p>Ooops, we could not display the BPMN 2.0 diagram.</p>
+
+        <div class="details">
+          <span>Import Error Details</span>
+          <pre></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas" id="js-canvas"></div>
+    <div class="properties-panel-parent" id="js-properties-panel"></div>
+  </div>
+
+  <ul class="buttons">
+    <li>
+      <a id="js-download-diagram" href="#" title="download BPMN diagram">
+        BPMN diagram
+      </a>
+    </li>
+    <li>
+      <a id="js-download-svg" href="#" title="download as SVG image">
+        SVG image
+      </a>
+    </li>
+    <li>
+      <input id="btn_file" type="file" style="display:none"/>
+      <a id="js-import-diagram" hrer="#" title="import BPMN diagram">
+        IMPORT
+      </a>
+    </li>
+    <li>
+      <a id="js-in-diagram" href="#" title="zoom in diagram">
+        IN
+      </a>
+    </li>
+    <li>
+      <a id="js-out-diagram" href="#" title="zoom out diagram">
+        OUT
+      </a>
+    </li>
+    <li>
+      <a id="js-location-diagram" href="#" title="location diagram">
+        LOCATION
+      </a>
+    </li>
+    <li>
+      <a id="js-clean-diagram" href="#" title="clean diagram">
+        CLEAN
+      </a>
+    </li>
+    <li>
+      <a id="js-save-diagram" href="#" title="save diagram">
+        SAVE
+      </a>
+    </li>
+    <li>
+      <a id="js-keyboard-diagram" href="#" title="toggle keyboard">
+        KEYBOARD
+      </a>
+    </li>
+    <li>
+      <a id="js-fullscreen-diagram" href="#" title="toggle fullscreen">
+        FULLSCREEN
+      </a>
+    </li>
+    <li>
+      <a id="js-go-home" href="/" title="go to home">home</a>
+    </li>
+  </ul>
+
+  <script src="//unpkg.com/layui@2.6.8/dist/layui.js"></script>
+  <script>
+    var conns = {{conns|tojson if conns else []}};
+    var flows = {{flows|tojson if flows else []}};
+  </script>
+  <script src="{{app_base}}/static/bpmn/app.js"></script>
+</html>

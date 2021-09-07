@@ -1,0 +1,351 @@
+{#
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License.
+#}
+
+{% extends "airflow/dag.html" %}
+{% from 'appbuilder/loading_dots.html' import loading_dots %}
+
+{% block page_title %}{{ dag.dag_id }} - Graph - {{ appbuilder.app_name }}{% endblock %}
+
+{% block head_meta %}
+  {{ super() }}
+  <meta name="execution_date" content="{{ execution_date }}">
+  <meta name="arrange" content="{{ arrange }}">
+  <meta name="task_instances_url" content="{{ url_for('Airflow.task_instances') }}">
+{% endblock %}
+
+{% block head_css %}
+  {{ super() }}
+  <link rel="stylesheet" type="text/css" href="{{ url_for_asset('graph.css') }}">
+  <style type="text/css">
+    {% for state, state_color in state_color_mapping.items() %}
+      g.node.{{state}} rect {
+        stroke: {{state_color}};
+      }
+    {% endfor %}
+  </style>
+  <style>
+    .box{
+        position:relative;
+        border:1px solid red;
+    }
+    .box::before{
+        content:attr(title);
+        position:absolute;
+        left:10px; //文字宽度
+        transform:translateX(-50%);
+        -webkit-transform:translate(8%,-50%);
+        padding:0 10px;
+        background-color:#fff;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  {{ super() }}
+  <div class="row dag-view-tools">
+    <div class="col-md-10">
+      <form method="get" class="form-inline">
+        <input type="hidden" name="root" value="{{ root }}">
+        <input type="hidden" value="{{ dag.dag_id }}" name="dag_id">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label class="sr-only" for="base_date">Base date</label>
+          <div class="input-group">
+            {{ form.base_date(class_="form-control", disabled=not(dag.has_dag_runs())) }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="sr-only" for="num_runs">Number of runs</label>
+          <div class="input-group">
+            <div class="input-group-addon">Runs</div>
+            {{ form.num_runs(class_="form-control", disabled=not(dag.has_dag_runs())) }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="sr-only" for="execution_date">Run</label>
+          <div class="input-group">
+            <div class="input-group-addon">Run</div>
+            {{ form.execution_date(class_="form-control", disabled=not(dag.has_dag_runs())) }}
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="sr-only" for="arrange">Layout</label>
+          <div class="input-group">
+            <div class="input-group-addon">Layout</div>
+            {{ form.arrange(class_="form-control") }}
+          </div>
+        </div>
+        <button type="submit" class="btn">Update</button>
+        {% if not dag.has_dag_runs() %}<span class="text-warning" style="margin-left:16px;">No DAG runs yet.</span>{% endif %}
+      </form>
+    </div>
+    <div class="col-md-2 text-right">
+      <label class="sr-only" for="searchbox">Search</label>
+      <input type="search" class="form-control" id="searchbox" placeholder="Find Task…">
+    </div>
+  </div>
+
+  <div class="legend-row">
+    <div>
+      {% for op in operators %}<span class="legend-item" style="color: {{ op.ui_fgcolor }};background: {{ op.ui_color }};">
+        {{ op.task_type }}</span>{% endfor %}
+    </div>
+    <div>
+      {% for state, state_color in state_color_mapping.items() %}<span class="legend-item legend-item--interactive js-state-legend-item" data-state="{{state}}" style="border-color: {{state_color}};">
+        {{state}}</span>{% endfor %}<span class="legend-item legend-item--interactive legend-item--no-border js-state-legend-item" data-state="no_status" style="border-color:white;">no_status</span>
+    </div>
+  </div>
+  <div id="error" style="display: none; margin-top: 10px;" class="alert alert-danger" role="alert">
+    <span class="material-icons" aria-hidden="true">error</span>
+    <span id="error_msg">Oops.</span>
+  </div>
+  <br>
+
+  <div>
+  <div class="conten-left" style="float:left;height:100%;max-height:800px;width:200px;overflow:scroll;">
+	<br/>
+	{#<label style="overflow:hidden;border:1px solid #ccc;border-radius:5px;padding-left:3px;padding-right:3px;" onclick="addNode('group')" title="任务分组">group</label><br/>
+	<br/>#}
+	<label style="overflow:hidden;border:1px solid #ccc;border-radius:5px;padding-left:3px;padding-right:3px;" onclick="addNode('dummy')" title="空操作">dummy</label><br/>
+	<br/>
+	<label style="overflow:hidden;border:1px solid #ccc;border-radius:5px;padding-left:3px;padding-right:3px;" onclick="addNode('shortcircuit')" title="控制下游跳过">shortcircuit</label><br/>
+	<br/>
+	<label style="overflow:hidden;border:1px solid #ccc;border-radius:5px;padding-left:3px;padding-right:3px;" onclick="addNode('branch]]]')" title="控制下游分支">branch</label><br/>
+	<br/>
+	<label style="overflow:hidden;border:1px solid #ccc;border-radius:5px;padding-left:3px;padding-right:3px;" onclick="addNode('ssh')" title="通过ssh到远程机器执行命令">ssh</label><br/>
+	<br/>
+	<label style="overflow:hidden;border:1px solid #ccc;border-radius:5px;padding-left:3px;padding-right:3px;" onclick="addNode('bash')" title="在worker本地执行命令">bash</label><br/>
+	<br/>
+	<label style="overflow:hidden;border:1px solid #ccc;border-radius:5px;padding-left:3px;padding-right:3px;" onclick="addNode('python')" title="在worker本地执行python模块代码">python</label><br/>
+	<br/>
+	<label style="overflow:hidden;border:1px solid #ccc;border-radius:5px;padding-left:3px;padding-right:3px;" onclick="addNode('SqlSensor')" title="等待sql结果">SqlSensor</label><br/>
+	<br/>
+	{#
+	{% for op in operator_list %}
+	<label style="overflow:hidden;border:1px solid #ccc;border-radius:5px;padding-left:3px;padding-right:3px;" onclick="addNode('{{ op }}')">{{ op }}</label><br/>
+	{% endfor %}
+	#}
+  </div>
+  <div class="content-right" style="float:right;height:100%;max-height:800px;width:350px;overflow:scroll;">
+	  <br/>
+        <div class="box" title="Dag" style="padding-left:10px;border:1px solid #ccc;border-radius:5px;">
+		<br/>
+		<label>id: {% if dag.dag_id=='example_dag' %}<input id="dag_dag_id" type="text" value=""/>{% else %}{{ dag.dag_id }}{% endif %}</label><br/>
+		{# <label>project: <input id="dag_project" type="text" value="{{ info.project }}" /></label><br/>#}
+		<label>owner: <input id="dag_owner" type="text" value="{{ info.owner }}" /></label><br/>
+		<label>start: <input id="dag_start_date" type="text" value="{{ dag.start_date or '' }}"/></label><br/>
+		<label>end: <input id="dag_end_date" type="text" value="{{ dag.end_date or '' }}"/></label><br/>
+		<label>schedule: <input id="dag_schedule_interval" type="text" value="{{ dag.schedule_interval or '' }}"/></label><br/>
+		<label title="超时后，当前dagrun剩下scheduled任务放弃执行">timeout:<input type="text" value="{{ info.dagrun_timeout or '' }}"/></label>
+		<label>email: <input id="dag_email" type="text" value="{{ info.email or '' }}"/></label><br/>
+		<label>tags: <input id="dag_tags" type="text" value="{{ info.tags or '' }}"/></label><br/>
+		<label>catchup(需要自动回填吗,等介于backfill命令): <input id="dag_catchup" type="checkbox" {% if info.catchup %}checked="checked"{% endif %}></input></label><br/>
+		<label>description: <textarea cols="33" id="dag_description">{{ info.description or '' }}</textarea></label><br/>
+      	</div>
+	{% for k,t in tasks.items() %}
+	<br/>
+        <div class="box" title="Task(skip_exit_code:99将忽略错误继续)" style="padding-left:10px;border:1px solid #ccc;border-radius:5px;">
+		<br/>
+		<label>id:<input id="dag_id-{{ k }}" type="text" value="{{ k }}"/></label><br/>
+		<label>upstream:<select>
+                                <option value ="xxx">xxx</option>
+			</select></label><br/>
+		<label>type:<select>
+				<option value ="{{ t.task_type }}">{{ t.task_type }}</option>
+			</select></label><br/>
+		<label>group:<select>
+				<option value =""></option>
+			</select></label><br/>
+		{% if t.task_type=="PythonOperator" %}
+		<label>main_module:<input type="text" value=""/></label>
+		<label>main_function:<input type="text" value=""/></label>
+		<label>kwargs:<input type="text" value=""/></label>
+		{% endif %}
+		{% if t.task_type=="BashOperator" %}
+		<label>command:<input id="dag_bash-{{ k }}" type="text" value="{{ t.params.bash_command or '' }}"/></label><br/>
+		<label>rander:xxxx</label><br/>
+		{% endif %}
+		{% if t.params.slicing %}
+		<label>自动分片（总分片数）:<input type="text" value="3"/></label>
+		<label>指定分片:<input type="text" value="1-4, 4-8, 5"/></label>
+		{% endif %}
+		<label>timeout:<input type="text" value="{{ t.params.execution_timeout or '' }}"/></label>
+		<label>email:<input id="dag_email-{{ k }}" type="text" value="{{ t.params.email or '' }}"/></label><br/>
+		<label>Trigger Rules:<select autocomplete="off">
+				<option value="all_success" {% if t.params.trigger_rule=='all_success' %}selected="selected"{% endif %}>all_success</option>
+                                <option value="all_failed" {% if t.params.trigger_rule=='all_failed' %}selected="selected"{% endif %}>all_failed</option>
+				<option value="all_done" {% if t.params.trigger_rule=='all_done' %}selected="selected"{% endif %}>all_done</option>
+                                <option value="one_failed" {% if t.params.trigger_rule=='one_failed' %}selected="selected"{% endif %}>one_failed</option>
+                                <option value="one_success" {% if t.params.trigger_rule=='one_success' %}selected="selected"{% endif %}>one_success</option>
+				<option value="none_failed" {% if t.params.trigger_rule=='none_failed' %}selected="selected"{% endif %}>none_failed</option>
+				<option value="none_failed_or_skipped" {% if t.params.trigger_rule=='none_failed_or_skipped' %}selected="selected"{% endif %}>none_failed_or_skipped</option>
+				<option value="none_skipped" {% if t.params.trigger_rule=='none_skipped' %}selected="selected"{% endif %}>none_skipped</option>
+				<option value="dummy" {% if t.params.trigger_rule=='dummy' %}selected="selected"{% endif %}>dummy</option>
+                        </select></label><br/>
+	</div>
+	{% endfor %}
+	<br/>
+	<div><input type="button" value="add" /></div>
+	<br/>
+	<br/>
+        <div class="box" title="dot" style="padding-left:10px;border:1px solid #ccc;border-radius:5px;">
+		<br/>
+		<textarea id="dag_dot" rows="5" cols="44" onKeyUp="tryDraw();">{{ dag.dot }}</textarea>
+	</div>
+	<br/>
+  </div>
+  <div class="content-middle" style="margin:0px 350px 0px 200px;height:100%;max-height:800px;overflow:scroll;">
+  <div class="refresh-actions">
+    {{ loading_dots(id='loading-dots', classes='refresh-loading') }}
+    <label class="switch-label">
+      <input class="switch-input" id="scroll_zoom" type="checkbox" {% if dag_run_state == 'running' %}checked{% endif %}>
+      <span class="switch" aria-hidden="true"></span>
+      Scroll-zoom
+    </label>
+    <button class="btn btn-default btn-sm" id="zoomout_button">
+      <span class="material-icons" aria-hidden="true" title="中心">o</span>
+    </button>
+    <button class="btn btn-default btn-sm" id="zoomout_button">
+      <span class="material-icons" aria-hidden="true" title="多选">[]</span>
+    </button>
+    <button class="btn btn-default btn-sm" id="zoomout_button">
+      <span class="material-icons" aria-hidden="true" title="放大">+</span>
+    </button>
+    <button class="btn btn-default btn-sm" id="zoomin_button">
+      <span class="material-icons" aria-hidden="true" title="缩小">-</span>
+    </button>
+  </div>
+  <div class="refresh-actions">
+    {{ loading_dots(id='loading-dots', classes='refresh-loading') }}
+    <label class="switch-label">
+      <input class="switch-input" id="auto_refresh" type="checkbox" {% if dag_run_state == 'running' %}checked{% endif %}>
+      <span class="switch" aria-hidden="true"></span>
+      Auto-refresh
+    </label>
+    <button class="btn btn-default btn-sm" id="refresh_button">
+      <span class="material-icons" aria-hidden="true">refresh</span>
+    </button>
+  </div>
+  <div class="svg-wrapper">
+    <div class="graph-svg-wrap">
+      <svg id="graph-svg" width="{{ width }}" height="{{ height }}">
+        <g id="dig" transform="translate(20,20)"></g>
+      </svg>
+    </div>
+  </div>
+  </div>
+  </div>
+{% endblock %}
+
+{% block tail %}
+  {{ super() }}
+  <script>
+    const nodes = {{ nodes|tojson }};
+    const edges = {{ edges|tojson }};
+    const tasks = {{ tasks|tojson }};
+    const info = {{ info|tojson }};
+    const taskn = Object.keys(tasks).length
+    let taskInstances = {{ task_instances|tojson }};
+  </script>
+  <script src="{{ url_for_asset('d3.min.js') }}"></script>
+  <script src="https://cdn.bootcdn.net/ajax/libs/d3-graphviz/4.0.0/d3-graphviz.js"></script>
+  <script src="https://dagrejs.github.io/project/graphlib-dot/v0.6.4/graphlib-dot.js"></script>
+  <script src="{{ url_for_asset('dagre-d3.min.js') }}"></script>
+  <script src="{{ url_for_asset('d3-shape.min.js') }}"></script>
+  <script src="{{ url_for_asset('d3-tip.js') }}"></script>
+  <script src="{{ url_for_asset('graph.js') }}"></script>
+
+  <script>
+function addNode(node)
+{
+        // change nodes
+	tid = "task"+taskn;
+	nodes.children.push({
+		"id":tid,
+		"tooltip":tid,
+		"value":{
+			"label":tid,
+			"labelStyle": "fill:#000;",
+			"rx": 5,
+			"ry": 5,
+			"style": "fill:#f0ede4;"
+		},
+	});
+	try{
+		edges.push({"source_id":Object.keys(tasks)[taskn-1],"target_id":tid});
+		expandGroup(null, nodes);
+		taskn++;
+	}catch(err){
+		;
+	}
+        //$.getScript('{{ url_for_asset('graph.js') }}');
+}
+function addEdge(edge)
+{
+	// change edges
+	//$.getScript('{{ url_for_asset('graph.js') }}');
+}
+
+$('#scroll_zoom').change(() => {
+  if ($('#scroll_zoom').is(':checked')) {
+    // Run an initial refesh before starting interval if manually turned on
+    //handleRefresh();
+    localStorage.removeItem('disableScrollzoom');
+  } else {
+    localStorage.setItem('disableScrollzoom', 'true');
+  }
+  //startOrStopRefresh();
+  let innerSvg = d3.select('#graph-svg g');
+  let svg = d3.select('#graph-svg');
+  let zoom = d3.behavior.zoom().on('zoom', () => {
+                    innerSvg.attr('transform', `translate(${d3.event.translate})scale(${d3.event.scale})`);
+  });
+  if (localStorage.getItem('disableScrollzoom'))
+        {
+                svg.call(zoom);
+        }
+        else
+        {
+                svg.on('.zoom', null);
+        }
+});
+
+// 覆盖了click
+// 同步js到form
+d3.selectAll('g.node').on('click', (nodeId) => {
+    // TODO:
+    $("#dag_id-"+nodeId).focus();
+    $("#dag_id-"+nodeId).val(nodeId);
+    $("#dag_bash-"+nodeId).val(tasks[nodeId].params.bash_command);
+    $("#dag_email-"+nodeId).val(tasks[nodeId].params.email);
+    //alert(tasks.get(nodeId));
+});
+// 同步form到js
+
+
+
+function tryDraw()
+{
+    // TODO:xxx
+    alert("refresh dag");
+}
+
+  </script>
+
+{% endblock %}
