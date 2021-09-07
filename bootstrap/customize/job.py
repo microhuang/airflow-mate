@@ -1,3 +1,6 @@
+
+import airflow
+
 from airflow.jobs.scheduler_job import SchedulerJob
 
 from airflow.utils.session import provide_session 
@@ -64,8 +67,9 @@ from sqlalchemy import (
 )
 from airflow.jobs.scheduler_job import TI, DR, DM
 
-@provide_session
-def wrapper__executable_task_instances_to_queued(self, max_tis: int, session: Session = None) -> List[TI]:
+if airflow.version.version > '2.1.2':
+    @provide_session
+    def wrapper__executable_task_instances_to_queued(self, max_tis: int, session: Session = None) -> List[TI]:
         """
         Finds TIs that are ready for execution with respect to pool limits,
         dag max_active_tasks, executor state, and priority.
@@ -260,6 +264,6 @@ def wrapper__executable_task_instances_to_queued(self, max_tis: int, session: Se
             make_transient(ti)
         return executable_tis
 
-SchedulerJob._executable_task_instances_to_queued = wrapper__executable_task_instances_to_queued
+    SchedulerJob._executable_task_instances_to_queued = wrapper__executable_task_instances_to_queued
 
 

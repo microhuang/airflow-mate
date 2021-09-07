@@ -19,6 +19,8 @@ from airflow.utils.state import State
 from airflow.models import Variable
 from xml.dom.minidom import parse
 
+from dynamic.gitop import GitPull
+
 SFTPOperator.template_fields = ('local_filepath', 'remote_filepath', 'remote_host', 'ssh_conn_id', 'operation')
 
 
