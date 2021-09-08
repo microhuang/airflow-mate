@@ -9,7 +9,9 @@
 
 > PYTHONVERBOSE= 
 
-> LOGPRING= 
+> LOGPRING=
+
+> FAULT_LOG= 
 
 > FLASK_APP=
 

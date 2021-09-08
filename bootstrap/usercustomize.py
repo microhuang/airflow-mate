@@ -229,11 +229,12 @@ patch_mp_connection_bpo_17560()
 
 import faulthandler
 from subprocess import Popen, PIPE
-if os.getenv('FAULT_LOG'):
-    FAULTHANDLER_TEE = Popen(f'tee -a '+os.getenv('FAULT_LOG'), shell=True, stdin=PIPE)
-else:
-    FAULTHANDLER_TEE = Popen(f'tee -a /tmp/python_fault.log', shell=True, stdin=PIPE)
-faulthandler.enable(file=FAULTHANDLER_TEE.stdin)
+if not os.getenv('FAULT_LOG')=='OFF':
+    if os.getenv('FAULT_LOG'):
+        FAULTHANDLER_TEE = Popen(f'tee -a '+os.getenv('FAULT_LOG'), shell=True, stdin=PIPE)
+    else:
+        FAULTHANDLER_TEE = Popen(f'tee -a /tmp/python_fault.log', shell=True, stdin=PIPE)
+    faulthandler.enable(file=FAULTHANDLER_TEE.stdin)
 ######################################################################
 
 
