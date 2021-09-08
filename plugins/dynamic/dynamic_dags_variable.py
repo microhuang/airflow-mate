@@ -637,9 +637,17 @@ def bpmn_file_to_dag_data(bpmn_path):
             tasks = {}
             edges = []
             nodes = {}
+            bpmn_ver = "bpmn2:"
             domTree = parse(bpmn_path)
             rootNode = domTree.documentElement
-            processNode = rootNode.getElementsByTagName('bpmn2:process')[0]
+            processNode = rootNode.getElementsByTagName(bpmn_ver+'process')
+            if not processNode:
+                processNode = rootNode.getElementsByTagName('process')
+                if processNode:
+                    bpmn_ver = ""
+                    processNode = processNode[0]
+            else:
+                processNode = processNode[0]
             if processNode.getAttribute('type')=='Flow' or processNode.getAttribute('airflow_type')=='Flow':
                 return None, None
             dag_id =  processNode.getAttribute('id')
@@ -655,7 +663,7 @@ def bpmn_file_to_dag_data(bpmn_path):
             documentationRef = processNode.getAttribute('documentationRef')
             if documentationRef and not description:
                 try:
-                    description = rootNode.getElementsByTagName('bpmn2:documentation')[0].childNodes[0].data
+                    description = rootNode.getElementsByTagName(bpmn_ver+'documentation')[0].childNodes[0].data
                 except Exception as ex:
                     print(dag_id, ', description, ', ex)
             info['description'] = description
@@ -688,7 +696,7 @@ def bpmn_file_to_dag_data(bpmn_path):
             # group
             shapes = {}
             groups = {}
-            groupsNode = processNode.getElementsByTagName('bpmn2:group')
+            groupsNode = processNode.getElementsByTagName(bpmn_ver+'group')
             for groupNode in groupsNode:
                 group_id = groupNode.getAttribute('id')
                 group_name = groupNode.getAttribute('name')
@@ -715,7 +723,7 @@ def bpmn_file_to_dag_data(bpmn_path):
                     shapes[group_id]['width'] = node.getAttribute('width')
                     shapes[group_id]['height'] = node.getAttribute('height')
             # task
-            tasksNode = processNode.getElementsByTagName('bpmn2:task')
+            tasksNode = processNode.getElementsByTagName(bpmn_ver+'task')
             for taskNode in tasksNode:
                 task_id = taskNode.getAttribute('id').strip()
                 # task group
@@ -830,7 +838,7 @@ def bpmn_file_to_dag_data(bpmn_path):
                         tasks[task_id]['params']['skip_dag_when_previous_running_worker'] = True
                     #print('eeeeeee', tasks)
             # sub process <=> node => python operator
-            tasksNode = processNode.getElementsByTagName('bpmn2:subProcess')
+            tasksNode = processNode.getElementsByTagName(bpmn_ver+'subProcess')
             for taskNode in tasksNode:
                 task_id = taskNode.getAttribute('id')
                 task_name = taskNode.getAttribute('name')
@@ -848,7 +856,7 @@ def bpmn_file_to_dag_data(bpmn_path):
                     tasks[task_id]['params']['bpmn'] = taskNode.toxml()
                     tasks[task_id]['task_group'] = task_group
             # edges
-            edgesNode = processNode.getElementsByTagName('bpmn2:sequenceFlow')
+            edgesNode = processNode.getElementsByTagName(bpmn_ver+'sequenceFlow')
             for edgeNode in edgesNode:
                 if edgeNode.parentNode==processNode and (edgeNode.getAttribute('sourceRef') in ids and edgeNode.getAttribute('targetRef') in ids):
                     edges.append({'source_id':ids[edgeNode.getAttribute('sourceRef')], 'target_id':ids[edgeNode.getAttribute('targetRef')]})

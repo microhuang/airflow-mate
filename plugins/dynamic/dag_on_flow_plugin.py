@@ -119,7 +119,15 @@ def bpmn_save(session=None):
             data = urllib.parse.unquote(data)
             domTree = parseString(data)
             rootNode = domTree.documentElement
-            processNode = rootNode.getElementsByTagName('bpmn2:process')[0]
+            processNode = rootNode.getElementsByTagName('bpmn2:process')
+            if not processNode:
+                processNode = rootNode.getElementsByTagName('process')
+                if not processNode:
+                    raise Exception('data error')
+                else:
+                    processNode = processNode[0]
+            else:
+                processNode = processNode[0]
             if not dag_id:
               dag_id =  processNode.getAttribute('id')
               dag_name = processNode.getAttribute('name')
@@ -135,10 +143,10 @@ def bpmn_save(session=None):
                 return jsonify({"code": 200, "detail": "done", })
           except Exception as err:
               print(err)
-              return jsonify({"code": 500, "detail": "data error", })
+              return jsonify({"code": 501, "detail": "data error", })
         else:
-            return jsonify({"code": 500, "detail": "parameter error", })
-        return jsonify({"code": 500, "detail": "data error", })
+            return jsonify({"code": 502, "detail": "parameter error", })
+        return jsonify({"code": 503, "detail": "data error", })
 
 
 class DagOnFlowPlugin(AirflowPlugin):

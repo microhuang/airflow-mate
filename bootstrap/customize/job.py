@@ -67,7 +67,7 @@ from sqlalchemy import (
 )
 from airflow.jobs.scheduler_job import TI, DR, DM
 
-if airflow.version.version > '2.1.2':
+if airflow.version.version > '2.1.3':
     @provide_session
     def wrapper__executable_task_instances_to_queued(self, max_tis: int, session: Session = None) -> List[TI]:
         """
