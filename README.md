@@ -1,6 +1,8 @@
 # airflow-mate
 一个集成了流程引擎、可无需编写代码图形界面编排调度任务的airflow2+扩展
 
+![flow](/t1.png)
+
 ### 必要的环境变量
 
 > AIRFLOW_CONN_SMTP_DEFAULT= 
