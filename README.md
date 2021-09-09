@@ -9,6 +9,8 @@
 
 > LOGPRING= 
 
+> FAULT_LOG=
+
 > FLASK_APP=
 
 > PYTHONPATH=
