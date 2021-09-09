@@ -683,6 +683,8 @@ def bpmn_file_to_dag_data(bpmn_path):
             if end_date:
                 info['end_date'] = end_date
             schedule_interval = processNode.getAttribute('schedule')
+            if schedule_interval=='':
+                schedule_interval=None
             info['schedule_interval'] = schedule_interval
             dagrun_timeout = processNode.getAttribute('dagrun_timeout')
             info['dagrun_timeout'] = dagrun_timeout
