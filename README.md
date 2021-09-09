@@ -13,6 +13,8 @@
 
 > FAULT_LOG= 
 
+> FAULT_LOG=
+
 > FLASK_APP=
 
 > PYTHONPATH=
