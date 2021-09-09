@@ -309,20 +309,24 @@ def create_dag_from_nodes_edges_tasks(dag_info, nodes, edges, tasks):
             for k in _env:
                 if not isinstance(_env.get(k),str):
                     _env[k] = str(_env.get(k))
-
+            group = None
+            '''
             ids = task_id.split('.')
             ids.pop()
             gid = ''
-            group = None
             for i in ids:
                 p_group = None
                 if groups.get(gid):
                     p_group = groups.get(gid)
                 gid = gid + i
                 if not groups.get(gid):
+                  try:
                     group = TaskGroup(i, tooltip=gid)
                     groups[gid] = group
                     _[gid] = group
+                  except Exception as err:
+                    print('err: dag_id,', dag.dag_id)
+                    raise err
                 else:
                     group = groups[gid]
                 if p_group:
@@ -333,6 +337,7 @@ def create_dag_from_nodes_edges_tasks(dag_info, nodes, edges, tasks):
                 if not group:
                     group = TaskGroup(tasks.get(task_id).get('task_group'), tooltip=tasks.get(task_id).get('task_group'), dag=dag)
                     groups[tasks.get(task_id).get('task_group')] = group
+            '''
             execution_timeout = tasks.get(task_id).get('params',{}).get('execution_timeout') # TODO:xxx
             #execution_timeout = timedelta(hours=1)
             if isinstance(execution_timeout, str):
