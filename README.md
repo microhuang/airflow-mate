@@ -3,7 +3,7 @@
 
 ![flow](/t1.png)
 
-### 必要的环境变量
+### 重要的环境变量
 
 > AIRFLOW_CONN_SMTP_DEFAULT= 
 
